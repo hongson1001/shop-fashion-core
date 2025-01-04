@@ -21,7 +21,7 @@ export class User {
   code: string;
 
   @Prop()
-  passCode: string;
+  passCode: string; //Dùng random number để tạo passCode xong rồi khi tạo tài khoản thì password + passCode xong rồi hash lại tăng bảo mật
 
   @Prop({ enum: ['customer', 'seller'], default: ['customer'] })
   role: string[];

@@ -3,5 +3,7 @@ import { UserInformationService } from './user-information.service';
 
 @Controller('user-information')
 export class UserInformationController {
-  constructor(private readonly userInformationService: UserInformationService) {}
+  constructor(
+    private readonly userInformationService: UserInformationService,
+  ) {}
 }

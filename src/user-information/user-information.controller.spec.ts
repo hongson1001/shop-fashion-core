@@ -11,7 +11,9 @@ describe('UserInformationController', () => {
       providers: [UserInformationService],
     }).compile();
 
-    controller = module.get<UserInformationController>(UserInformationController);
+    controller = module.get<UserInformationController>(
+      UserInformationController,
+    );
   });
 
   it('should be defined', () => {

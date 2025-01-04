@@ -10,6 +10,7 @@ import { Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { PaginationSet } from 'models/response';
 import { JwtService } from '@nestjs/jwt';
+import { genStatusLabel } from 'src/utils/status.util';
 
 @Injectable()
 export class AdminService {
@@ -42,18 +43,42 @@ export class AdminService {
     return updateAdmin;
   }
 
-  async list(page: number, pageSize: number): Promise<PaginationSet<Admin>> {
+  async list(
+    page: number,
+    pageSize: number,
+    search?: string,
+    role?: string,
+    status?: string,
+  ): Promise<PaginationSet<Admin>> {
     const skip = (page - 1) * pageSize;
 
-    const totalItems = await this.adminModel.countDocuments();
+    const filter: any = {};
+
+    if (search) {
+      filter.username = { $regex: search, $options: 'i' };
+    }
+    if (role) {
+      filter.role = role;
+    }
+    if (status) {
+      filter.status = status;
+    }
+
+    const totalItems = await this.adminModel.countDocuments(filter);
 
     const response = await this.adminModel
-      .find()
+      .find(filter)
       .skip(skip)
       .limit(pageSize)
       .exec();
 
-    const data: Admin[] = response.map((admin) => admin.toJSON());
+    const data: Admin[] = response.map((admin) => {
+      const adminJson = admin.toJSON();
+      return {
+        ...adminJson,
+        statusLabel: genStatusLabel(adminJson.status),
+      };
+    });
 
     return new PaginationSet(data, page, pageSize, totalItems);
   }

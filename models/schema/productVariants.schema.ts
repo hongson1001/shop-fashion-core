@@ -7,10 +7,13 @@ export class ProductVariants {
   productId: string;
 
   @Prop()
+  variantName: string; //Tên biến thể
+
+  @Prop()
   price: number;
 
   @Prop()
-  stockQuantity: number;
+  stockQuantity: number; //Số lượng tồn kho
 
   @Prop()
   sku: string;

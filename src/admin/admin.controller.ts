@@ -69,9 +69,18 @@ export class AdminController {
   async list(
     @Query('page') page: number = 1,
     @Query('pageSize') pageSize: number = 10,
+    @Query('search') search: string,
+    @Query('role') role: string,
+    @Query('status') status: string,
   ) {
     try {
-      const response = await this.adminService.list(page, pageSize);
+      const response = await this.adminService.list(
+        page,
+        pageSize,
+        search,
+        role,
+        status,
+      );
       return new ResponseContentModel<PaginationSet<Admin>>(
         200,
         'Lấy danh sách thành công',

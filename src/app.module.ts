@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AdminModule } from './admin/admin.module';
@@ -9,6 +9,9 @@ import { JwtModule } from '@nestjs/jwt';
 import { UserModule } from './user/user.module';
 import { UserInformationModule } from './user-information/user-information.module';
 import { ShopModule } from './shop/shop.module';
+import { TokenBlacklistModule } from './token-blacklist/token-blacklist.module';
+import { TokenBlacklistMiddleware } from './middleware/token-blacklist.middleware';
+import { MailerCustomerModule } from './mailer/mailer.module';
 
 @Module({
   imports: [
@@ -27,8 +30,14 @@ import { ShopModule } from './shop/shop.module';
     UserModule,
     UserInformationModule,
     ShopModule,
+    TokenBlacklistModule,
+    MailerCustomerModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(TokenBlacklistMiddleware).forRoutes('*');
+  }
+}

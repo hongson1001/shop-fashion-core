@@ -1,13 +1,17 @@
-export interface IResponseData {
+import moment from 'moment-timezone';
+
+export interface IResponseData<T> {
   statusCode: number;
   message: string;
-  data: any;
+  data: T;
+  timestamp: string;
 }
 
+// Class dữ liệu phân trang
 export class PaginationSet<T> {
   page: number; // Trang hiện tại
-  pageSize: number; // Số mục trên mỗi trang
-  totalItems: number; // Tổng số mục
+  pageSize: number; // Số dữ liệu trên mỗi trang
+  totalItems: number; // Tổng số dữ liệu
   totalPages: number; // Tổng số trang (tính toán)
   hasNextPage: boolean; // Có trang tiếp theo không
   hasPreviousPage: boolean; // Có trang trước đó không
@@ -16,48 +20,54 @@ export class PaginationSet<T> {
   constructor(data: T[], totalItems: number, page: number, pageSize: number) {
     this.totalItems = totalItems;
     this.page = page;
+    this.pageSize = pageSize;
 
-    // Tính toán tổng số trang
+    //Tính toán số trang
     this.totalPages = Math.ceil(totalItems / pageSize);
 
-    // Xác định xem có trang tiếp theo hoặc trước đó không
+    //Xác định có trang trước hay trang tiếp theo hay không
     this.hasNextPage = page < this.totalPages;
     this.hasPreviousPage = page > 1;
-    this.pageSize = pageSize;
 
     this.data = data;
   }
 }
 
+// Class response trả dữ liệu thành công
 export class ResponseContentModel<T> {
   statusCode: number;
   message: string;
-  data: T | null;
+  data: T | T[] | PaginationSet<T> | null;
+  timestamp: string;
 
-  constructor(statusCode: number, message: string, data: T | null = null) {
+  constructor(
+    statusCode: number,
+    message: string,
+    data: T | T[] | PaginationSet<T> | null,
+    timeZone: string = 'Asia/Ho_Chi_Minh',
+  ) {
     this.statusCode = statusCode;
     this.message = message;
+    this.timestamp = moment().tz(timeZone).format('YYYY-MM-DD HH:mm:ss');
     this.data = data;
   }
 }
 
-export class ResponseMultiContentModels<T> {
+export class ErrorResponseModel {
   statusCode: number;
   message: string;
-  data: T[];
+  errors: string[] | Record<string, any>;
+  timestamp: string;
 
-  constructor(statusCode: number, message: string, data: T[] = []) {
+  constructor(
+    statusCode: number,
+    message: string,
+    errors: string[] | Record<string, any>,
+    timeZone: string = 'Asia/Ho_Chi_Minh',
+  ) {
     this.statusCode = statusCode;
     this.message = message;
-    this.data = data;
-  }
-}
-
-export class ErrorResponseModel extends ResponseContentModel<null> {
-  errors: string[];
-
-  constructor(statusCode: number, message: string, errors: string[]) {
-    super(statusCode, message, null);
+    this.timestamp = moment().tz(timeZone).format('YYYY-MM-DD HH:mm:ss');
     this.errors = errors;
   }
 }

@@ -1,21 +1,19 @@
 import { Module } from '@nestjs/common';
-import { UserInformationService } from './user-information.service';
-import { UserInformationController } from './user-information.controller';
+import { TokenBlacklistService } from './token-blacklist.service';
+import { TokenBlacklistController } from './token-blacklist.controller';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
-import { JwtModule } from '@nestjs/jwt';
-import { User, UserSchema } from 'models/schema/user.schema';
 import {
-  UserInformation,
-  UserInformationSchema,
-} from 'models/schema/userInformation.schema';
+  TokenBlacklist,
+  TokenBlacklistSchema,
+} from 'models/schema/tokenblacklist';
+import { JwtModule } from '@nestjs/jwt';
 
 @Module({
   imports: [
     ConfigModule.forRoot(),
     MongooseModule.forFeature([
-      { name: User.name, schema: UserSchema },
-      { name: UserInformation.name, schema: UserInformationSchema },
+      { name: TokenBlacklist.name, schema: TokenBlacklistSchema },
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -28,7 +26,8 @@ import {
       inject: [ConfigService],
     }),
   ],
-  controllers: [UserInformationController],
-  providers: [UserInformationService],
+  controllers: [TokenBlacklistController],
+  providers: [TokenBlacklistService],
+  exports: [TokenBlacklistService],
 })
-export class UserInformationModule {}
+export class TokenBlacklistModule {}

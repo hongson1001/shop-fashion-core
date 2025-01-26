@@ -87,7 +87,7 @@ export class AdminService {
     const admin = await this.adminModel.findById(id).exec();
 
     if (!admin) {
-      throw new NotFoundException(`Không tìm t hấy bản ghi có Id: ${id}`);
+      throw new NotFoundException(`Không tìm thấy bản ghi có Id: ${id}`);
     }
 
     return admin;
@@ -125,8 +125,8 @@ export class AdminService {
     try {
       const token = this.jwtService.sign(payload);
       return { accessToken: token };
-    } catch (error) {
-      throw new Error('Lỗi không tạo được token: ' + error.message);
+    } catch (error: unknown) {
+      throw new Error('Lỗi không tạo được token: ' + (error as Error).message);
     }
   }
 }

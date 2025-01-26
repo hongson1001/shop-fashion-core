@@ -39,7 +39,7 @@ export class AdminController {
       );
     } catch (error) {
       return new ErrorResponseModel(500, 'Có lỗi trong quá trình xử lý', [
-        error.message || 'Unknown error occurred',
+        [(error as Error).message || 'Unknown error occurred'],
       ]);
     }
   }
@@ -59,7 +59,7 @@ export class AdminController {
       );
     } catch (error) {
       return new ErrorResponseModel(500, 'Có lỗi trong quá trình xử lý', [
-        error.message || 'Unknown error occurred',
+        [(error as Error).message || 'Unknown error occurred'],
       ]);
     }
   }
@@ -81,6 +81,7 @@ export class AdminController {
         role,
         status,
       );
+
       return new ResponseContentModel<PaginationSet<Admin>>(
         200,
         'Lấy danh sách thành công',
@@ -88,7 +89,7 @@ export class AdminController {
       );
     } catch (error) {
       return new ErrorResponseModel(500, 'Có lỗi trong quá trình xử lý', [
-        error.message || 'Unknown error occurred',
+        [(error as Error).message || 'Unknown error occurred'],
       ]);
     }
   }
@@ -106,7 +107,7 @@ export class AdminController {
       );
     } catch (error) {
       return new ErrorResponseModel(500, 'Có lỗi trong quá trình xử lý', [
-        error.message || 'Unknown error occurred',
+        [(error as Error).message || 'Unknown error occurred'],
       ]);
     }
   }
@@ -124,7 +125,7 @@ export class AdminController {
       );
     } catch (error) {
       return new ErrorResponseModel(500, 'Có lỗi trong quá trình xử lý', [
-        error.message || 'Unknown error occurred',
+        [(error as Error).message || 'Unknown error occurred'],
       ]);
     }
   }
@@ -141,7 +142,7 @@ export class AdminController {
       );
     } catch (error) {
       return new ErrorResponseModel(500, 'Có lỗi trong quá trình xử lý', [
-        error.message || 'Unknown error occurred',
+        [(error as Error).message || 'Unknown error occurred'],
       ]);
     }
   }

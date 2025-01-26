@@ -1,13 +1,12 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
-import * as mongoose from 'mongoose';
 
 @Schema({ timestamps: true })
 export class Payment {
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true })
+  @Prop({ ref: 'Order', required: true })
   orderId: string; // Tham chiếu đến bảng Orders
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true })
+  @Prop({ ref: 'User', required: true })
   userId: string; // Tham chiếu đến bảng Users
 
   @Prop({ required: true, min: 0 })

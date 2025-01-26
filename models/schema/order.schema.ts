@@ -1,17 +1,15 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import mongoose from 'mongoose';
+import { Document } from 'mongoose';
 
 @Schema({ timestamps: true })
 export class OrderItem {
   @Prop({
-    type: mongoose.Schema.Types.ObjectId,
     ref: 'Product',
     required: true,
   })
   productId: string; // Tham chiếu đến bảng Product
 
   @Prop({
-    type: mongoose.Schema.Types.ObjectId,
     ref: 'ProductVariants',
     required: true,
   })
@@ -28,10 +26,10 @@ export const OrderItemSchema = SchemaFactory.createForClass(OrderItem);
 
 @Schema({ timestamps: true })
 export class Order {
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true })
+  @Prop({ ref: 'User', required: true })
   userId: string; // Tham chiếu đến bảng Users
 
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Shop', required: true })
+  @Prop({ ref: 'Shop', required: true })
   shopId: string; // Tham chiếu đến bảng Shops
 
   @Prop({ type: [OrderItemSchema], default: [] })

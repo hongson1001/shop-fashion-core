@@ -13,6 +13,8 @@ import {
 import { Model } from 'mongoose';
 import {
   ChangePassworDto,
+  ConfirmDeleteAccountDto,
+  DeleteAccountDto,
   ForgotPasswordDto,
   LoginUserDto,
   RegisterDto,
@@ -77,6 +79,9 @@ export class UserService {
       text: ` Đây là mã OTP của bạn: ${otp}. Mã OTP sẽ hết hạn sau 5 phút. Vui lòng không cung cấp mã này cho bất kỳ ai `,
     });
 
+    const message = `Đây là mã OTP của bạn: ${otp}. Mã OTP sẽ hết hạn sau 5 phút. Vui lòng không cung cấp mã này cho bất kỳ ai`;
+    await sendLogsTelegram(message);
+
     return ` Mã OTP đã được gửi tới email: ${email} của bạn `;
   }
 
@@ -139,7 +144,9 @@ export class UserService {
   async loginUser(loginUserDto: LoginUserDto): Promise<any> {
     const { email, password, isResmember } = loginUserDto;
 
-    const user = await this.userModel.findOne({ email }).exec();
+    const user = await this.userModel
+      .findOne({ email, status: 'active' })
+      .exec();
     if (!user) {
       throw new NotFoundException(`Email: ${email} không tồn tại`);
     }
@@ -290,6 +297,142 @@ export class UserService {
 
   //#endregion
 
+  //#region Khoá mở tài khoản và xoá tài khoản
+  //Khoá hoặc mở tài khoản
+  async changeAccountUser(
+    userId: string,
+    action: 'active' | 'blocked',
+  ): Promise<any> {
+    const user = await this.userModel.findById(userId).exec();
+    if (!user) {
+      throw new NotFoundException('KHông tìm thấy người dùng');
+    }
+
+    user.status = action;
+    await user.save();
+
+    return ` Tài khoản đã được ${action === 'active' ? 'mở' : 'khoá'} thành công `;
+  }
+
+  //Xoá tài khoản
+  async deleteAccount(deleteAccountDto: DeleteAccountDto): Promise<string> {
+    const { email } = deleteAccountDto;
+
+    const user = await this.userModel.findOne({ email }).exec();
+    if (!user) {
+      throw new NotFoundException(` Emai: ${email} không tồn tại `);
+    }
+
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+    user.otp = otp;
+    user.otpExpiresAt = otpExpiresAt;
+    await user.save();
+
+    await this.mailerService.sendMail({
+      to: email,
+      subject: 'Xác minh tài khoản',
+      text: ` Mã OTP của bạn là: ${otp}. Mã OTP sẽ hết hạn sau 5p. Vui òng không cung cấp mã này cho bất kỳ ai `,
+    });
+
+    const message = `Mã OTP của bạn là: ${otp}. Mã OTP sẽ hết hạn sau 5p. Vui òng không cung cấp mã này cho bất kỳ ai`;
+    await sendLogsTelegram(message);
+
+    return 'Mã OTP đã được gửi tới email của bạn';
+  }
+
+  async confirmDeleteAccount(
+    confirmDeleteAccountDto: ConfirmDeleteAccountDto,
+  ): Promise<string> {
+    const { email, otp } = confirmDeleteAccountDto;
+
+    const user = await this.userModel.findOne({ email }).exec();
+    if (!user) {
+      throw new NotFoundException(` Emai: ${email} không tồn tại `);
+    }
+
+    if (user.otp !== otp) {
+      throw new BadRequestException('Mã OTP không hợp lệ');
+    }
+    if (new Date() > user.otpExpiresAt) {
+      throw new BadRequestException('Mã OTP đã hết hạn');
+    }
+
+    await user.deleteOne({ email }).exec();
+
+    await this.mailerService.sendMail({
+      to: email,
+      subject: 'Tài khoản đã bị xóa',
+      text: 'Tài khoản của bạn đã được xóa thành công. Nếu đây không phải là bạn, vui lòng liên hệ với chúng tôi ngay lập tức.',
+    });
+
+    const message = `Tài khoản ${email} của bạn đã xóa thành công.`;
+    await sendLogsTelegram(message);
+
+    return 'Tài khoản của bạn đã được xóa thành công.';
+  }
+  //#endregion
+
   //#region CRUD User
+  async list(
+    page: number = 1,
+    pageSize: number = 10,
+    search?: string,
+    status?: string,
+    role?: string,
+  ): Promise<PaginationSet<User>> {
+    const skip = (page - 1) * pageSize;
+    const filter: Record<string, any> = {};
+
+    if (search) {
+      filter.$or = [
+        { email: { $regex: search, $options: 'i' } },
+        { name: { $regex: search, $options: 'i' } },
+      ];
+    }
+    if (status) {
+      filter.status = status;
+    }
+    if (role) {
+      filter.role = role;
+    }
+
+    const [data, totalItems] = await Promise.all([
+      this.userModel.find(filter).skip(skip).limit(pageSize).exec(),
+      this.userModel.countDocuments(filter).exec(),
+    ]);
+
+    const dataWithStatus = data.map((u) => ({
+      ...u.toObject(),
+      statusLabel: genStatusLabel(u.status),
+    }));
+
+    return new PaginationSet(dataWithStatus, totalItems, page, pageSize);
+  }
+
+  async detail(code: string): Promise<any> {
+    const user = await this.userModel
+      .findOne({ code })
+      .select('-refreshToken -isVerified -password -passCode')
+      .exec();
+    if (!user) {
+      throw new NotFoundException('Không tìm tháy tài khoản');
+    }
+
+    const userInfomation = await this.uiModel
+      .findOne({ userId: user._id })
+      .exec();
+
+    const statusLabel = genStatusLabel(user.status);
+
+    return {
+      user: {
+        ...user.toObject(),
+        statusLabel,
+      },
+      userInfomation: userInfomation || null,
+    };
+  }
   //#endregion
 }

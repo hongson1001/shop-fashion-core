@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Get,
-  Patch,
   Post,
   Query,
   UseGuards,
@@ -15,6 +14,8 @@ import {
 import { UserService } from './user.service';
 import {
   ChangePassworDto,
+  ConfirmDeleteAccountDto,
+  DeleteAccountDto,
   ForgotPasswordDto,
   LoginUserDto,
   RegisterDto,
@@ -45,7 +46,11 @@ export class UserController {
     try {
       const response = await this.userService.registerUser(registerDto);
 
-      return new ResponseContentModel(201, 'Đăng ký mail thành công', response);
+      return new ResponseContentModel<any>(
+        201,
+        'Đăng ký mail thành công',
+        response,
+      );
     } catch (error) {
       return new ErrorResponseModel(500, 'Có lỗi trong quá trình xử lý', [
         [(error as Error).message || 'Unknown error occurred'],
@@ -58,7 +63,7 @@ export class UserController {
     try {
       const response = await this.userService.verifyOtp(verifyOtpDto);
 
-      return new ResponseContentModel(
+      return new ResponseContentModel<any>(
         201,
         'Xác mình mã OTP thành công',
         response,
@@ -75,7 +80,7 @@ export class UserController {
     try {
       const response = await this.userService.setPassword(passworđto);
 
-      return new ResponseContentModel(
+      return new ResponseContentModel<any>(
         201,
         'Thiết lập mật khẩu thành công',
         response,
@@ -94,7 +99,11 @@ export class UserController {
     try {
       const response = await this.userService.loginUser(loginUserDto);
 
-      return new ResponseContentModel(200, 'Đăng nhập thành công', response);
+      return new ResponseContentModel<any>(
+        200,
+        'Đăng nhập thành công',
+        response,
+      );
     } catch (error) {
       return new ErrorResponseModel(500, 'Có lỗi trong quá trình xử lý', [
         [(error as Error).message || 'Unknown error occurred'],
@@ -113,7 +122,11 @@ export class UserController {
 
       const response = await this.userService.logoutUser(token);
 
-      return new ResponseContentModel(200, 'Đăng xuất thành công', response);
+      return new ResponseContentModel<any>(
+        200,
+        'Đăng xuất thành công',
+        response,
+      );
     } catch (error) {
       return new ErrorResponseModel(500, 'Có lỗi trong quá trình xử lý', [
         [(error as Error).message || 'Unknown error occurred'],
@@ -136,7 +149,11 @@ export class UserController {
         changePasswordDto,
       );
 
-      return new ResponseContentModel(200, 'Đổi mật khẩu thành công', response);
+      return new ResponseContentModel<any>(
+        200,
+        'Đổi mật khẩu thành công',
+        response,
+      );
     } catch (error) {
       return new ErrorResponseModel(500, 'Có lỗi trong quá trình xử lý', [
         [(error as Error).message || 'Unknown error occurred'],
@@ -148,7 +165,7 @@ export class UserController {
   async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
     try {
       const response = await this.userService.forgotPassword(forgotPasswordDto);
-      return new ResponseContentModel(200, 'Mã OTP đã được gửi', response);
+      return new ResponseContentModel<any>(200, 'Mã OTP đã được gửi', response);
     } catch (error) {
       return new ErrorResponseModel(500, 'Có lỗi trong quá trình xử lý', [
         [(error as Error).message || 'Unknown error occurred'],
@@ -159,7 +176,7 @@ export class UserController {
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     try {
       const response = await this.userService.resetPassword(resetPasswordDto);
-      return new ResponseContentModel(
+      return new ResponseContentModel<any>(
         200,
         'Mật khẩu đã được thay đổi',
         response,
@@ -172,6 +189,116 @@ export class UserController {
   }
   //#endregion
 
-  //#region CRUD User
+  //#region Khoá và mở tài khoản
+  //Khoá hoặc mở tài khoản
+  @Post('change-account-status')
+  @UseGuards(AdminAuthGuard)
+  async changeAccountUser(
+    @Body('userId') userId: string,
+    @Body('action') action: 'active' | 'blocked',
+  ) {
+    try {
+      const response = await this.userService.changeAccountUser(userId, action);
+
+      return new ResponseContentModel<any>(
+        200,
+        'Tài đã được thay đổi',
+        response,
+      );
+    } catch (error) {
+      return new ErrorResponseModel(500, 'Có lỗi trong quá trình xử lý', [
+        [(error as Error).message || 'Unknown error occurred'],
+      ]);
+    }
+  }
+
+  //Xoá tài khoản
+  @Post('delete-account')
+  @UseGuards(UserAuthGuard)
+  async requestDeleteAccount(
+    @Body() deleteAccountRequestDto: DeleteAccountDto,
+  ) {
+    try {
+      const response = await this.userService.deleteAccount(
+        deleteAccountRequestDto,
+      );
+      return new ResponseContentModel(
+        200,
+        'Yêu cầu xóa tài khoản thành công',
+        response,
+      );
+    } catch (error) {
+      return new ErrorResponseModel(500, 'Có lỗi xảy ra', [
+        [(error as Error).message || 'Unknown error occurred'],
+      ]);
+    }
+  }
+
+  @Post('confirm-delete-account')
+  @UseGuards(UserAuthGuard)
+  async confirmDeleteAccount(
+    @Body() confirmDeleteAccountDto: ConfirmDeleteAccountDto,
+  ) {
+    try {
+      const response = await this.userService.confirmDeleteAccount(
+        confirmDeleteAccountDto,
+      );
+      return new ResponseContentModel(200, 'Tài khoản đã được xóa', response);
+    } catch (error) {
+      return new ErrorResponseModel(500, 'Có lỗi xảy ra', [
+        [(error as Error).message || 'Unknown error occurred'],
+      ]);
+    }
+  }
+  //#endregion
+
+  //#region  CRUD User
+  @Get()
+  @UseGuards(AdminAuthGuard)
+  async list(
+    @Query('page') page: number = 1,
+    @Query('pageSize') pageSize: number = 10,
+    @Query('search') search?: string,
+    @Query('status') status?: string,
+    @Query('role') role?: string,
+  ) {
+    try {
+      const response = await this.userService.list(
+        page,
+        pageSize,
+        search,
+        role,
+        status,
+      );
+
+      return new ResponseContentModel<PaginationSet<User>>(
+        200,
+        'Lấy danh sách thành công',
+        response,
+      );
+    } catch (error) {
+      return new ErrorResponseModel(500, 'Có lỗi xảy ra', [
+        [(error as Error).message || 'Unknown error occurred'],
+      ]);
+    }
+  }
+
+  @Get(':code')
+  @UseGuards(UserAuthGuard)
+  async detail(@Param('code') code: string) {
+    try {
+      const response = await this.userService.detail(code);
+
+      return new ResponseContentModel<any>(
+        200,
+        'Lấy chi tiết tài khoản thành công',
+        response,
+      );
+    } catch (error) {
+      return new ErrorResponseModel(500, 'Có lỗi xảy ra', [
+        [(error as Error).message || 'Unknown error occurred'],
+      ]);
+    }
+  }
   //#endregion
 }

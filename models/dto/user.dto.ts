@@ -131,3 +131,20 @@ export class ResetPasswordDto {
   @IsNotEmpty()
   newPassword: string;
 }
+
+//Xoá tài khoản
+export class DeleteAccountDto {
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+}
+
+export class ConfirmDeleteAccountDto {
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+
+  @IsString()
+  @IsNotEmpty()
+  otp: string;
+}

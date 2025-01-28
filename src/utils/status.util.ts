@@ -1,7 +1,7 @@
-const genStatusLabel = (status: string) => {
+const genStatusLabel = (status): string => {
   switch (status) {
     case 'active':
-      return 'Dang kích hoạt';
+      return 'Đang kích hoạt';
     case 'unactive':
       return 'Chưa kích hoạt';
     case 'deleted':

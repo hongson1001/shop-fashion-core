@@ -38,6 +38,19 @@ export class User {
 
   @Prop({ default: false })
   isVerified: boolean;
+
+  // Danh cho phần login, giới hạn số lần login
+  @Prop({ type: Number, default: 0 })
+  failedLoginAttempts: number;
+
+  @Prop({ type: Number, default: 0 })
+  failedLoginAttemptSeries: number;
+
+  @Prop({ type: Date, default: null })
+  lockUntil: Date;
+
+  @Prop({ type: Boolean, default: false })
+  isPermanentlyLocked: boolean;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

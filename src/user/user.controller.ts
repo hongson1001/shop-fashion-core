@@ -10,6 +10,7 @@ import {
   Param,
   Headers,
   BadGatewayException,
+  Req,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import {
@@ -32,6 +33,8 @@ import { User } from 'models/schema/user.schema';
 import { UserAuthGuard } from 'src/middleware/user.middleware';
 import { AdminAuthGuard } from 'src/middleware/admin.middleware';
 import { JwtService } from '@nestjs/jwt';
+import { LoginHistory } from 'models/schema/loginHistory.schema';
+// import { Request } from 'express';
 
 @Controller('user')
 export class UserController {
@@ -95,9 +98,9 @@ export class UserController {
 
   //#region Đăng nhập và đăng xuất
   @Post('login')
-  async loginUser(@Body() loginUserDto: LoginUserDto) {
+  async loginUser(@Body() loginUserDto: LoginUserDto, @Req() request: Request) {
     try {
-      const response = await this.userService.loginUser(loginUserDto);
+      const response = await this.userService.loginUser(loginUserDto, request);
 
       return new ResponseContentModel<any>(
         200,
@@ -113,14 +116,17 @@ export class UserController {
 
   @Post('logout')
   @UseGuards(UserAuthGuard)
-  async logoutUser(@Headers('Authorization') authorization: string) {
+  async logoutUser(
+    @Headers('Authorization') authorization: string,
+    @Req() request: any,
+  ) {
     try {
       const token = authorization?.replace('Bearer ', '');
       if (!token) {
         throw new BadGatewayException('Token không hợp lệ');
       }
 
-      const response = await this.userService.logoutUser(token);
+      const response = await this.userService.logoutUser(token, request);
 
       return new ResponseContentModel<any>(
         200,
@@ -292,6 +298,36 @@ export class UserController {
       return new ResponseContentModel<any>(
         200,
         'Lấy chi tiết tài khoản thành công',
+        response,
+      );
+    } catch (error) {
+      return new ErrorResponseModel(500, 'Có lỗi xảy ra', [
+        [(error as Error).message || 'Unknown error occurred'],
+      ]);
+    }
+  }
+
+  @Get('history-user/login-history')
+  @UseGuards(UserAuthGuard)
+  async listLoginHistory(
+    @Request() req: any,
+    @Query('page') page: number = 1,
+    @Query('pageSize') pageSize: number = 10,
+    @Query('action') action?: 'login' | 'logout',
+  ) {
+    try {
+      const userId = req.user.sub;
+
+      const response = await this.userService.listLoginHistory(
+        userId,
+        page,
+        pageSize,
+        action,
+      );
+
+      return new ResponseContentModel<PaginationSet<LoginHistory>>(
+        200,
+        'Lấy danh sách thành công',
         response,
       );
     } catch (error) {

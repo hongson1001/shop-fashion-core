@@ -31,6 +31,11 @@ import { TokenBlacklistService } from 'src/token-blacklist/token-blacklist.servi
 import { MailerCustomerService } from 'src/mailer/mailer.service';
 import * as crypto from 'crypto';
 import { sendLogsTelegram } from 'src/utils/send-logs';
+import {
+  LoginHistory,
+  LoginHistoryDocument,
+} from 'models/schema/loginHistory.schema';
+import moment from 'moment-timezone';
 
 @Injectable()
 export class UserService {
@@ -41,6 +46,8 @@ export class UserService {
     private readonly uiModel: Model<UserInformationDocument>,
     @InjectModel(Admin.name)
     private readonly adminModel: Model<AdmniDocument>,
+    @InjectModel(LoginHistory.name)
+    private readonly loginHistoryModel: Model<LoginHistoryDocument>,
 
     private readonly jwtService: JwtService,
     private readonly tokenBlacklistService: TokenBlacklistService,
@@ -59,19 +66,19 @@ export class UserService {
     const otp = crypto.randomInt(100000, 999999).toString();
     const otpExpiresAt = new Date(Date.now() + 5 * 50 * 1000);
 
-    if (!user) {
-      const newUser = new this.userModel({
-        email,
-        otp,
-        otpExpiresAt,
-        isVerified: false,
-      });
-      await newUser.save();
-    } else {
-      user.otp = otp;
-      user.otpExpiresAt = otpExpiresAt;
-      await user.save();
-    }
+    const newUser = new this.userModel({
+      email,
+      otp,
+      otpExpiresAt,
+      isVerified: false,
+    });
+    await newUser.save();
+
+    const newUIInfo = new this.uiModel({
+      userId: newUser._id,
+      email: email,
+    });
+    await newUIInfo.save();
 
     await this.mailerService.sendMail({
       to: email,
@@ -141,14 +148,25 @@ export class UserService {
   //#endregion
 
   //#region Đăng nhập và dăng xuất
-  async loginUser(loginUserDto: LoginUserDto): Promise<any> {
+  async loginUser(loginUserDto: LoginUserDto, request: any): Promise<any> {
     const { email, password, isResmember } = loginUserDto;
 
-    const user = await this.userModel
-      .findOne({ email, status: 'active' })
-      .exec();
+    const user = await this.userModel.findOne({ email }).exec();
     if (!user) {
+      await this.loginHistoryModel.create({
+        userId: null,
+        action: 'login',
+        ipAddress: request.ip,
+        userAgent: request.headers['user-agent'],
+        status: 'failed',
+        message: 'Email không tồn tại',
+      });
       throw new NotFoundException(`Email: ${email} không tồn tại`);
+    }
+    if (user.status !== 'active') {
+      throw new BadRequestException(
+        'Tài khoản của bạn cần được mở khoá để đăng nhập',
+      );
     }
 
     const isPasswordValid = await bcrypt.compare(
@@ -156,6 +174,14 @@ export class UserService {
       user.password,
     );
     if (!isPasswordValid) {
+      await this.loginHistoryModel.create({
+        userId: user._id,
+        action: 'login',
+        ipAddress: request.ip,
+        userAgent: request.headers['user-agent'],
+        status: 'failed',
+        message: 'Mật khẩu không chính xác',
+      });
       throw new ForbiddenException('Mật khẩu không chính xác');
     }
 
@@ -171,16 +197,28 @@ export class UserService {
       const token = await this.jwtService.signAsync(payload, {
         expiresIn: tokenExpiry,
       });
+
+      await this.loginHistoryModel.create({
+        userId: user._id,
+        action: 'login',
+        ipAddress: request.ip,
+        userAgent: request.headers['user-agent'],
+        status: 'success',
+      });
+
       return { accessToken: token };
     } catch (error: unknown) {
       throw new Error('Lỗi không tạo được token' + (error as Error).message);
     }
   }
 
-  async logoutUser(token: string): Promise<any> {
+  async logoutUser(token: string, request: any): Promise<any> {
     try {
-      const decodedToken = this.jwtService.decode(token) as { exp: number };
-      if (!decodedToken || !decodedToken.exp) {
+      const decodedToken = this.jwtService.decode(token) as {
+        sub: string;
+        exp: number;
+      };
+      if (!decodedToken || !decodedToken.sub) {
         throw new Error('Token không hợp lệ');
       }
 
@@ -188,8 +226,25 @@ export class UserService {
 
       await this.tokenBlacklistService.addTokenToBlacklist(token, expiresIn);
 
+      await this.loginHistoryModel.create({
+        userId: decodedToken.sub,
+        action: 'logout',
+        ipAddress: request.ip,
+        userAgent: request.headers['user-agent'],
+        status: 'success',
+      });
+
       return 'Đăng xuất thành công';
     } catch (error) {
+      await this.loginHistoryModel.create({
+        userId: null,
+        action: 'logout',
+        ipAddress: request.ip,
+        userAgent: request.headers['user-agent'],
+        status: 'failed',
+        message: 'Không thể đăng xuất: ' + (error as Error).message,
+      });
+
       throw new Error('Không thể đăng xuất: ' + (error as Error).message);
     }
   }
@@ -433,6 +488,43 @@ export class UserService {
       },
       userInfomation: userInfomation || null,
     };
+  }
+
+  async listLoginHistory(
+    userId: string,
+    page: number = 1,
+    pageSize = 10,
+    action?: 'login' | 'logout',
+  ): Promise<PaginationSet<LoginHistory>> {
+    const skip = (page - 1) * pageSize;
+
+    const filter: Record<string, any> = { userId };
+    if (action) {
+      filter.action = action;
+    }
+
+    const [data, totalItems] = await Promise.all([
+      this.loginHistoryModel
+        .find(filter)
+        .skip(skip)
+        .limit(pageSize)
+        .sort({
+          createdAt: -1,
+        })
+        .lean()
+        .exec(),
+      this.loginHistoryModel.countDocuments(filter).exec(),
+    ]);
+
+    const dataWithStatus = data.map((l: any) => ({
+      ...l,
+      createdAt: moment(l.createdAt)
+        .tz('Asia/Ho_Chi_Minh')
+        .format('HH:mm:ss DD/MM/YYYY'),
+      statusLabel: genStatusLabel(l.status),
+    }));
+
+    return new PaginationSet(dataWithStatus, totalItems, page, pageSize);
   }
   //#endregion
 }

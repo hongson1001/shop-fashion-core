@@ -8,6 +8,10 @@ const genStatusLabel = (status): string => {
       return 'Đã bị xoá';
     case 'blocked':
       return 'Đã bị khoá';
+    case 'success':
+      return 'Thành công';
+    case 'failed':
+      return 'Thât bại';
     default:
       return 'Không xác định';
   }

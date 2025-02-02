@@ -17,6 +17,10 @@ import {
 } from 'models/schema/tokenblacklist';
 import { MailerCustomerModule } from 'src/mailer/mailer.module';
 import { MailerCustomerService } from 'src/mailer/mailer.service';
+import {
+  LoginHistory,
+  LoginHistorySchema,
+} from 'models/schema/loginHistory.schema';
 
 @Module({
   imports: [
@@ -26,6 +30,7 @@ import { MailerCustomerService } from 'src/mailer/mailer.service';
       { name: UserInformation.name, schema: UserInformationSchema },
       { name: Admin.name, schema: AdminSchema },
       { name: TokenBlacklist.name, schema: TokenBlacklistSchema },
+      { name: LoginHistory.name, schema: LoginHistorySchema },
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],

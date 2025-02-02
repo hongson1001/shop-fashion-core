@@ -12,6 +12,7 @@ import { ShopModule } from './shop/shop.module';
 import { TokenBlacklistModule } from './token-blacklist/token-blacklist.module';
 import { TokenBlacklistMiddleware } from './middleware/token-blacklist.middleware';
 import { MailerCustomerModule } from './mailer/mailer.module';
+import { LocationModule } from './location/location.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { MailerCustomerModule } from './mailer/mailer.module';
     ShopModule,
     TokenBlacklistModule,
     MailerCustomerModule,
+    LocationModule,
   ],
   controllers: [AppController],
   providers: [AppService],
